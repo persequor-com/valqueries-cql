@@ -16,7 +16,6 @@ import io.prophecies.Cassandra;
 import io.prophecies.CassandraBatch;
 import io.prophecies.IndexConfig;
 import io.prophecies.WhereStatementCreator;
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import java.util.ArrayList;
 import java.util.List;
