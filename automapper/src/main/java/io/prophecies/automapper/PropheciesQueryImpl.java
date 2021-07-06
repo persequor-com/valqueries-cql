@@ -164,12 +164,12 @@ public class PropheciesQueryImpl<T> extends CrudRepoBaseQuery<T, PropheciesQuery
 
 	@Override
 	public long count() {
-		throw new NotImplementedException();
+		throw new RuntimeException("Not implemented");
 	}
 
 	@Override
 	public CrudRepository.CrudUpdateResult delete() {
-		throw new NotImplementedException();
+		throw new RuntimeException("Not implemented");
 	}
 
 	private CompoundKey getRelationKey(TypeDescriber<T> typeDescriber, KeySet fromKeys, T t) {
