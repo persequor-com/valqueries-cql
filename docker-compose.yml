@@ -1,0 +1,20 @@
+version: '2.3'
+services:
+  cassandra:
+    image: cassandra:3.11.4
+    restart: 'no'
+    mem_limit: 1892M
+    memswap_limit: -1
+    ports:
+      - "9043:9043"
+      - "9042:9042"
+    volumes:
+      - cassandra_data:/var/lib/cassandra
+    environment:
+      - CASSANDRA_CLUSTER_NAME=test
+      - JVM_OPTS=-Xms1536m -Xmx1536m
+    healthcheck:
+      test: ["CMD", "cqlsh", "-ucassandra", "-pcassandra", "127.0.0.1"]
+
+volumes:
+  cassandra_data:

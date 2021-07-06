@@ -1,0 +1,6 @@
+rootProject.name = 'cassandraprophecies'
+
+include 'core'
+include 'automapper'
+include 'test'
+
