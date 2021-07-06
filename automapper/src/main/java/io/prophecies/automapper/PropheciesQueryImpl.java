@@ -1,5 +1,8 @@
 package io.prophecies.automapper;
 
+import io.prophecies.Cassandra;
+import io.prophecies.CassandraBatch;
+import io.prophecies.WhereStatementCreator;
 import io.ran.CompoundKey;
 import io.ran.CrudRepoBaseQuery;
 import io.ran.CrudRepository;
@@ -12,10 +15,6 @@ import io.ran.RelationDescriber;
 import io.ran.TypeDescriber;
 import io.ran.TypeDescriberImpl;
 import io.ran.token.Token;
-import io.prophecies.Cassandra;
-import io.prophecies.CassandraBatch;
-import io.prophecies.IndexConfig;
-import io.prophecies.WhereStatementCreator;
 
 import java.util.ArrayList;
 import java.util.List;

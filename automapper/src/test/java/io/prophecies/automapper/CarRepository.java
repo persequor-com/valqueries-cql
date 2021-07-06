@@ -1,8 +1,6 @@
 package io.prophecies.automapper;
 
-import com.sun.tools.javac.jvm.Gen;
 import io.ran.GenericFactory;
-import io.ran.TypeDescriber;
 
 import javax.inject.Inject;
 import java.util.Collection;
