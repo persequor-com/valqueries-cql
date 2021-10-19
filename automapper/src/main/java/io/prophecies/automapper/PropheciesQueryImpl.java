@@ -1,8 +1,8 @@
 package io.prophecies.automapper;
 
+import com.datastax.oss.driver.api.core.cql.Row;
 import io.prophecies.Cassandra;
 import io.prophecies.CassandraBatch;
-import io.prophecies.IndexConfig;
 import io.prophecies.WhereStatementCreator;
 import io.ran.CompoundKey;
 import io.ran.CrudRepoBaseQuery;
@@ -119,6 +119,9 @@ public class PropheciesQueryImpl<T> extends CrudRepoBaseQuery<T, PropheciesQuery
 		return null;
 	}
 
+	private PropheciesQueryImpl<?> query(Class type) {
+		return new PropheciesQueryImpl(cassandra, type, cqlGenerator, factory, mappingHelper);
+	}
 
 	@Override
 	public Stream<T> execute() {
@@ -146,25 +149,12 @@ public class PropheciesQueryImpl<T> extends CrudRepoBaseQuery<T, PropheciesQuery
 						if (index.isPresent()) {
 							batch.select(index.get().getIndex().getName(), whereStatementCreator -> {
 								KeySet toKey = relationDescriber.getToKeys();
-								PropheciesQueryImpl<?> query = new PropheciesQueryImpl(cassandra, toType, cqlGenerator, factory, mappingHelper);
-								int i = 0;
-								for (Property.PropertyValue<?> k : ((Property.PropertyValueList<?>) fromKey.getValues())) {
-									Property to = toKey.toProperties().get(i);
-									query = (PropheciesQueryImpl<?>) query.eq(to.value(k.getValue()));
-									i++;
-								}
-								query.predicates.forEach(c -> c.accept(whereStatementCreator));
-
+								query(toType).accept(fromKey, toKey, whereStatementCreator);
 							}, -1, row -> {
 
 								batch.select(tableName, whereStatementCreator -> {
 									KeySet primaryKeys = this.typeDescriber.primaryKeys();
-									PropheciesQueryImpl<?> query = new PropheciesQueryImpl(cassandra, toType, cqlGenerator, factory, mappingHelper);
-									for (Property k : primaryKeys.toProperties()) {
-										query.eq(k.value(row.get(k.getToken().snake_case(), k.getType().clazz)));
-									}
-									query.predicates.forEach(c -> c.accept(whereStatementCreator));
-
+									query(toType).accept(primaryKeys, row, whereStatementCreator);
 								}, -1, r -> {
 									if (relationDescriber.isCollectionRelation()) {
 										relations.add(new ProphesiesHydrator<>(factory.get(toType), r, mappingHelper).get());
@@ -179,14 +169,7 @@ public class PropheciesQueryImpl<T> extends CrudRepoBaseQuery<T, PropheciesQuery
 						} else {
 							batch.select(tableName, whereStatementCreator -> {
 								KeySet toKey = relationDescriber.getToKeys();
-								PropheciesQueryImpl<?> query = new PropheciesQueryImpl(cassandra, toType, cqlGenerator, factory, mappingHelper);
-								int i = 0;
-								for (Property.PropertyValue<?> k : ((Property.PropertyValueList<?>) fromKey.getValues())) {
-									Property to = toKey.toProperties().get(i);
-									query = (PropheciesQueryImpl<?>) query.eq(to.value(k.getValue()));
-									i++;
-								}
-								query.predicates.forEach(c -> c.accept(whereStatementCreator));
+								query(toType).accept(fromKey, toKey, whereStatementCreator);
 							}, -1, r -> {
 								Object obj = new ProphesiesHydrator<>(factory.get(toType), r, mappingHelper).get();
 
@@ -202,6 +185,23 @@ public class PropheciesQueryImpl<T> extends CrudRepoBaseQuery<T, PropheciesQuery
 			stream = list.stream();
 		}
 		return stream;
+	}
+
+	private void accept(CompoundKey fromKey, KeySet toKey, WhereStatementCreator whereStatementCreator) {
+		int i = 0;
+		for (Property.PropertyValue<?> k : ((Property.PropertyValueList<?>) fromKey.getValues())) {
+			Property to = toKey.toProperties().get(i);
+			eq(to.value(k.getValue()));
+			i++;
+		}
+		predicates.forEach(c -> c.accept(whereStatementCreator));
+	}
+
+	private void accept(KeySet primaryKeys, Row row, WhereStatementCreator whereStatementCreator) {
+		for (Property k : primaryKeys.toProperties()) {
+			eq(k.value(row.get(k.getToken().snake_case(), k.getType().clazz)));
+		}
+		predicates.forEach(c -> c.accept(whereStatementCreator));
 	}
 
 	@Override
