@@ -29,6 +29,10 @@ public class IndexConfig {
 		return cql;
 	}
 
+	public List<Index> getIndices() {
+		return indices;
+	}
+
 	public class Index {
 		private String name;
 		private List<String> fields = new ArrayList<>();

@@ -4,6 +4,7 @@ package io.prophecies.automapper;/* Copyright (C) Persequor ApS - All Rights Res
  * Written by Persequor Development Team <partnersupport@persequor.com>, 
  */
 
+import io.prophecies.CassandraBatch;
 import io.ran.GenericFactory;
 import io.ran.MappingHelper;
 import io.ran.TypeDescriber;
@@ -19,6 +20,7 @@ import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 public class ProphesiesCrudRepositoryBase<T,K> implements PropheciesBaseCrudRepository<T, K> {
+	protected CqlDescriber cqlDescriber;
 	protected Cassandra cassandra;
 	protected Class<T> modelType;
 	protected Class<K> keyType;
@@ -36,6 +38,8 @@ public class ProphesiesCrudRepositoryBase<T,K> implements PropheciesBaseCrudRepo
 		this.cqlGenerator = cqlGenerator;
 		this.mappingHelper = mappingHelper;
 		this.typeDescriber = TypeDescriberImpl.getTypeDescriber(modelType);
+		this.cqlDescriber = CqlDescriber.get(typeDescriber);
+
 	}
 
 	private void setKey(WhereStatementCreator b, K id) {
@@ -70,7 +74,9 @@ public class ProphesiesCrudRepositoryBase<T,K> implements PropheciesBaseCrudRepo
 
 	@Override
 	public CrudUpdateResult save(T t) {
-		return new PropheciesUpdateResult(cassandra.insert(getTableName(), new ProphesiesColumnizer<T>(typeDescriber, mappingHelper).init(t)));
+		try(CassandraBatch batch = cassandra.batch()) {
+			return save(new PropheciesBatch(batch), t, modelType);
+		}
 	}
 
 	@Override
@@ -78,9 +84,38 @@ public class ProphesiesCrudRepositoryBase<T,K> implements PropheciesBaseCrudRepo
 		return new PropheciesQueryImpl<T>(cassandra, modelType, cqlGenerator,  factory, mappingHelper);
 	}
 
-
 	private String getTableName() {
-		return Token.CamelCase(modelType.getSimpleName()).snake_case();
+		return getTableName(modelType);
 	}
 
+	private String getTableName(Class<?> clazz) {
+		return Token.CamelCase(clazz.getSimpleName()).snake_case();
+	}
+
+	@Override
+	public <O, OK> CrudUpdateResult save(PropheciesBatch batch, O o, Class<O> oClass) {
+		TypeDescriber<O> typeDescriber = TypeDescriberImpl.getTypeDescriber(oClass);
+		CqlDescriber cqlDescriber = CqlDescriber.get(typeDescriber);
+
+		cqlDescriber.getIndices().forEach(index -> {
+			batch.insert(index.getName(), new ProphesiesIndexColumnizer<O>(index,typeDescriber, mappingHelper).init(o));
+		});
+		batch.insert(getTableName(oClass), new ProphesiesColumnizer<O>(typeDescriber, mappingHelper).init(o));
+		return new PropheciesUpdateResult(null);
+	}
+
+	@Override
+	public PropheciesBatch getBatch() {
+		return new PropheciesBatch(cassandra.batch());
+	}
+
+	@Override
+	public Class<T> getModelType() {
+		return modelType;
+	}
+
+	@Override
+	public Class<K> getKeyType() {
+		return keyType;
+	}
 }

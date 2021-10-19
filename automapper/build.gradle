@@ -1,6 +1,6 @@
 
 dependencies {
-    compile 'io.ran:core:0.0.1-0'
+    compile 'io.ran:core:0.0.1-9'
     compile project(':core')
     testCompile project(':test')
 }

@@ -27,7 +27,11 @@ public class WhereStatementCreatorImpl implements WhereStatementCreator {
 	@Override
 	public WhereStatementCreator andEquals(String field, Object value) {
 		consumers.add(stmt -> {
-			stmt.set(field, value, (Class)value.getClass());
+			if (value.getClass().isEnum()) {
+				stmt.set(field, ((Enum)value).name(), String.class);
+			} else {
+				stmt.set(field, value, (Class) value.getClass());
+			}
 		});
 		parts.add(field+" = :"+field);
 		return this;

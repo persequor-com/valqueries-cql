@@ -1,5 +1,6 @@
 package io.prophecies.automapper;
 
+import io.prophecies.CassandraBatchResultSet;
 import io.ran.CrudRepository;
 import io.prophecies.CassandraResultSet;
 
