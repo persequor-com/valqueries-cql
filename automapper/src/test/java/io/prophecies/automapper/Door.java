@@ -10,7 +10,7 @@ public class Door {
 	private UUID id;
 	private String title;
 	@Relation()
-	private transient io.prophecies.automapper.Car car;
+	private transient Car car;
 	private UUID carId;
 
 	public UUID getId() {
@@ -29,7 +29,7 @@ public class Door {
 		this.title = title;
 	}
 
-	public io.prophecies.automapper.Car getCar() {
+	public Car getCar() {
 		return car;
 	}
 

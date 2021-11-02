@@ -12,7 +12,9 @@ import javax.inject.Inject;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
@@ -34,5 +36,33 @@ public class TestDoubleQuery<T> extends io.ran.TestDoubleQuery<T, PropheciesQuer
 	@Override
 	protected PropheciesQuery<T> getQuery(Class<?> aClass) {
 		return new TestDoubleQuery<T>((Class)aClass, mappingHelper, genericFactory, store);
+	}
+
+	@Override
+	public <X> PropheciesQuery<T> subQuery(Function<T, X> field, Consumer<PropheciesQuery<X>> subQuery) {
+		field.apply(instance);
+		this.subQuery(typeDescriber.relations().get(queryWrapper.getCurrentProperty().getToken().snake_case()), subQuery);
+		return this;
+	}
+
+	@Override
+	public <X> PropheciesQuery<T> subQuery(BiConsumer<T, X> field, Consumer<PropheciesQuery<X>> subQuery) {
+		field.accept(instance, null);
+		this.subQuery(typeDescriber.relations().get(queryWrapper.getCurrentProperty().getToken().snake_case()), subQuery);
+		return this;
+	}
+
+	@Override
+	public <X> PropheciesQuery<T> subQueryList(Function<T, List<X>> field, Consumer<PropheciesQuery<X>> subQuery) {
+		field.apply(instance);
+		this.subQuery(typeDescriber.relations().get(queryWrapper.getCurrentProperty().getToken().snake_case()), subQuery);
+		return this;
+	}
+
+	@Override
+	public <X> PropheciesQuery<T> subQueryList(BiConsumer<T, List<X>> field, Consumer<PropheciesQuery<X>> subQuery) {
+		field.accept(instance, null);
+		this.subQuery(typeDescriber.relations().get(queryWrapper.getCurrentProperty().getToken().snake_case()), subQuery);
+		return this;
 	}
 }

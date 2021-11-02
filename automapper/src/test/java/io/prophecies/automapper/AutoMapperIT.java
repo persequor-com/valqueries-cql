@@ -153,8 +153,6 @@ public class AutoMapperIT extends AutoMapperBaseTests {
 		assertEquals(2, doors.size());
 		Exhaust actualExhaust = cars.stream().findFirst().get().getExhaust();
 		assertEquals(exhaust.getId(), actualExhaust.getId());
-
-
 	}
 
 	@Test
@@ -184,6 +182,39 @@ public class AutoMapperIT extends AutoMapperBaseTests {
 
 		verifyNoInteractions(resolver);
 	}
+
+	@Test
+	public void subQuery() throws Throwable {
+		Car model = factory.get(Car.class);
+		model.setId(UUID.randomUUID());
+		model.setTitle("Muh");
+		model.setExhaustId(UUID.randomUUID());
+		model.setCreatedAt(ZonedDateTime.now().withZoneSameInstant(ZoneOffset.UTC).truncatedTo(ChronoUnit.SECONDS));
+		carRepository.save(model);
+
+		Door door = factory.get(Door.class);
+		door.setId(UUID.randomUUID());
+		door.setTitle("Lazy as such");
+		door.setCar(model);
+		doorRepository.save(door);
+
+		Door res = doorRepository.query()
+				.subQuery(Door::getCar, sq -> {
+					sq.eq(Car::getId, model.getId());
+				})
+				.execute().findFirst().orElseThrow(() -> new RuntimeException());
+
+		assertEquals(door.getId(), res.getId());
+
+		Car carRes = carRepository.query()
+			.subQueryList(Car::getDoors, sq -> {
+				sq.eq(Door::getId, door.getId());
+			})
+			.execute().findFirst().orElseThrow(() -> new RuntimeException());
+
+		assertEquals(model.getId(), carRes.getId());
+	}
+
 
 
 	private class TestCassandraConfig implements ICassandraConfig {

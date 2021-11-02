@@ -93,6 +93,24 @@ public class CqlDescriber {
 		}).filter(Objects::nonNull).findFirst();
 	}
 
+	public Optional<RelationIndex> forRelation(RelationDescriber relationDescriber) {
+		return index.getIndices().stream().map(idx -> {
+			KeySet fromK = relationDescriber.getFromKeys();
+			boolean matches = true;
+			for(int i = 0;i<fromK.size();i++) {
+				if (!idx.getFields().get(i).equals(fromK.get(i).getToken().snake_case())) {
+					matches = false;
+					break;
+				}
+			}
+			if (matches) {
+				return new RelationIndex(idx, relationDescriber);
+			}
+
+			return null;
+		}).filter(Objects::nonNull).findFirst();
+	}
+
 	public static class RelationIndex {
 		private IndexConfig.Index index;
 		private RelationDescriber relationDescriber;

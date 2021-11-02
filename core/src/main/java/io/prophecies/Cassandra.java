@@ -3,6 +3,7 @@ package io.prophecies;
 import com.datastax.oss.driver.api.core.CqlSession;
 import com.datastax.oss.driver.api.core.cql.AsyncResultSet;
 import com.datastax.oss.driver.api.core.cql.ResultSet;
+import com.datastax.oss.driver.api.core.servererrors.InvalidQueryException;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -56,9 +57,13 @@ public class Cassandra {
 	}
 
 	public CassandraResultSet execute(String query, Consumer<ICassandraSettableData<?>> statementBinder) {
-		CassandraSettableData stmt = new CassandraSettableData(session.prepare(query).bind());
-		statementBinder.accept(stmt);
-		return new CassandraResultSet(session.execute(stmt.unwrapStatement()));
+		try {
+			CassandraSettableData stmt = new CassandraSettableData(session.prepare(query).bind());
+			statementBinder.accept(stmt);
+			return new CassandraResultSet(session.execute(stmt.unwrapStatement()));
+		} catch (InvalidQueryException exception) {
+			throw new RuntimeException("Invalid query: "+query+". See: "+exception.getMessage(), exception);
+		}
 	}
 
 	public ResultSet execute(String query, Consumer<ICassandraSettableData<?>> statementBinder, Integer limit) {
