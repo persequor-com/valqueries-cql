@@ -3,6 +3,7 @@ package io.prophecies.automapper;
 import com.datastax.oss.driver.api.core.CqlSessionBuilder;
 import com.datastax.oss.driver.internal.core.type.codec.ZonedTimestampCodec;
 import com.google.inject.Guice;
+import io.ran.CrudRepository;
 import io.ran.GenericFactory;
 import io.ran.Resolver;
 import io.prophecies.Cassandra;
@@ -19,10 +20,14 @@ import java.net.UnknownHostException;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.*;
@@ -61,18 +66,23 @@ public class AutoMapperIT extends AutoMapperBaseTests {
 
 	@Before
 	public void setup() {
+		sqlGenerator.generate(carDescriber).forEach(cql -> database.execute(cql, r -> {}));
+		sqlGenerator.getTableNames(carDescriber).forEach(tableName -> database.execute("TRUNCATE TABLE "+tableName+";", r -> {}));
 
+		sqlGenerator.generate(doorDescriber).forEach(cql -> database.execute(cql, r -> {}));
+		sqlGenerator.getTableNames(doorDescriber).forEach(tableName -> database.execute("TRUNCATE TABLE "+tableName+";", r -> {}));
 
-		database.execute(sqlGenerator.generate(carDescriber), r -> {});
-		database.execute("TRUNCATE TABLE "+sqlGenerator.getTableName(carDescriber)+";", r -> {});
-		database.execute(sqlGenerator.generate(doorDescriber), r -> {});
-		database.execute("TRUNCATE TABLE "+sqlGenerator.getTableName(doorDescriber)+";", r -> {});
-		database.execute(sqlGenerator.generate(engineDescriber), r -> {});
-		database.execute("TRUNCATE TABLE "+sqlGenerator.getTableName(engineDescriber)+";", r -> {});
-		database.execute(sqlGenerator.generate(engineCarDescriber), r -> {});
-		database.execute("TRUNCATE TABLE "+sqlGenerator.getTableName(engineCarDescriber)+";", r -> {});
-		database.execute(sqlGenerator.generate(exhaustDescriber), r -> {});
-		database.execute("TRUNCATE TABLE "+sqlGenerator.getTableName(exhaustDescriber)+";", r -> {});
+		sqlGenerator.generate(engineDescriber).forEach(cql -> database.execute(cql, r -> {}));
+		sqlGenerator.getTableNames(engineDescriber).forEach(tableName -> database.execute("TRUNCATE TABLE "+tableName+";", r -> {}));
+
+		sqlGenerator.generate(engineCarDescriber).forEach(cql -> database.execute(cql, r -> {}));
+		sqlGenerator.getTableNames(engineCarDescriber).forEach(tableName -> database.execute("TRUNCATE TABLE "+tableName+";", r -> {}));
+
+		sqlGenerator.generate(exhaustDescriber).forEach(cql -> database.execute(cql, r -> {}));
+		sqlGenerator.getTableNames(exhaustDescriber).forEach(tableName -> database.execute("TRUNCATE TABLE "+tableName+";", r -> {}));
+
+		sqlGenerator.generate(tireDescriber).forEach(cql -> database.execute(cql, r -> {}));
+		sqlGenerator.getTableNames(tireDescriber).forEach(tableName -> database.execute("TRUNCATE TABLE "+tableName+";", r -> {}));
 	}
 
 	@After
@@ -104,6 +114,77 @@ public class AutoMapperIT extends AutoMapperBaseTests {
 
 		verifyNoInteractions(resolver);
 	}
+
+
+	@Test
+	public void eagerLoad_multiple() throws Throwable {
+		Exhaust exhaust = factory.get(Exhaust.class);
+		exhaust.setId(UUID.randomUUID());
+		exhaust.setBrand(Brand.Porsche);
+		exhaustRepository.save(exhaust);
+
+		Car model = factory.get(Car.class);
+		model.setId(UUID.randomUUID());
+		model.setTitle("Muh");
+		model.setExhaust(exhaust);
+		model.setCreatedAt(ZonedDateTime.now().withZoneSameInstant(ZoneOffset.UTC).truncatedTo(ChronoUnit.SECONDS));
+		carRepository.save(model);
+
+		Door lazyModel = factory.get(Door.class);
+		lazyModel.setId(UUID.randomUUID());
+		lazyModel.setTitle("Lazy as such");
+		lazyModel.setCar(model);
+		doorRepository.save(lazyModel);
+
+		Door lazyModelToo = factory.get(Door.class);
+		lazyModelToo.setId(UUID.randomUUID());
+		lazyModelToo.setTitle("Lazy as well");
+		lazyModelToo.setCar(model);
+		doorRepository.save(lazyModelToo);
+
+		Collection<Car> cars = carRepository.query().withEager(Car::getDoors).withEager(Car::getExhaust).eq(Car::getId, model.getId()).execute().collect(Collectors.toList());
+
+		Class<? extends Car> cl = cars.stream().findFirst().get().getClass();
+		cl.getMethod("_resolverInject", Resolver.class).invoke(cars.stream().findFirst().get(), resolver);
+		verifyNoInteractions(resolver);
+
+		assertEquals(1, cars.size());
+		List<Door> doors = cars.stream().findFirst().get().getDoors();
+		assertEquals(2, doors.size());
+		Exhaust actualExhaust = cars.stream().findFirst().get().getExhaust();
+		assertEquals(exhaust.getId(), actualExhaust.getId());
+
+
+	}
+
+	@Test
+	public void eagerLoad_fromCompoundKey() throws Throwable {
+		Car model = factory.get(Car.class);
+		model.setId(UUID.randomUUID());
+		model.setTitle("Muh");
+		model.setExhaustId(UUID.randomUUID());
+		model.setCreatedAt(ZonedDateTime.now().withZoneSameInstant(ZoneOffset.UTC).truncatedTo(ChronoUnit.SECONDS));
+		carRepository.save(model);
+
+		Tire tire = factory.get(Tire.class);
+		tire.setCar(model);
+		tire.setBrand(Brand.Porsche);
+		tireRepository.save(tire);
+
+		Tire res = tireRepository.query()
+				.eq(Tire::getBrand, Brand.Porsche)
+				.eq(Tire::getCarId, model.getId())
+				.withEager(Tire::getCar)
+				.execute().findFirst().orElseThrow(() -> new RuntimeException());
+
+		res.getClass().getMethod("_resolverInject", Resolver.class).invoke(res, resolver);
+
+		Car actual = res.getCar();
+		assertNotNull(actual);
+
+		verifyNoInteractions(resolver);
+	}
+
 
 	private class TestCassandraConfig implements ICassandraConfig {
 		@Override

@@ -16,7 +16,7 @@ public class Car {
 	private ZonedDateTime createdAt;
 	private UUID exhaustId;
 	private List<String> numbers = new ArrayList<>();
-	@Relation(collectionElementType = Door.class)
+	@Relation(collectionElementType = Door.class, autoSave = true)
 	private transient List<Door> doors;
 	@Relation
 	private transient Exhaust exhaust;
@@ -51,6 +51,7 @@ public class Car {
 
 	public void setDoors(List<Door> doors) {
 		this.doors = doors;
+		doors.forEach(door -> door.setCarId(getId()));
 	}
 
 	public Brand getBrand() {

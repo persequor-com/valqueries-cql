@@ -13,6 +13,8 @@ import io.ran.token.Token;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.Collection;
 import java.util.HashSet;
@@ -53,6 +55,11 @@ public class ProphesiesHydrator<T> implements ObjectMapHydrator {
 	@Override
 	public Instant getInstant(Token key) {
 		return row.getInstant(transformToken(key));
+	}
+
+	@Override
+	public LocalDateTime getLocalDateTime(Token token) {
+		return row.getInstant(transformToken(token)).atZone(ZoneOffset.systemDefault()).toLocalDateTime();
 	}
 
 	@Override

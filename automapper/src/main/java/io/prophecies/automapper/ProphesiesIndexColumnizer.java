@@ -4,12 +4,12 @@ package io.prophecies.automapper;/* Copyright (C) Persequor ApS - All Rights Res
  * Written by Persequor Development Team <partnersupport@persequor.com>, 
  */
 
-import io.ran.Mapping;
+import io.prophecies.ICassandraSettableData;
+import io.prophecies.IndexConfig;
 import io.ran.MappingHelper;
 import io.ran.ObjectMapColumnizer;
 import io.ran.TypeDescriber;
 import io.ran.token.Token;
-import io.prophecies.ICassandraSettableData;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -22,12 +22,14 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.function.Consumer;
 
-public class ProphesiesColumnizer<T> implements ObjectMapColumnizer, Consumer<ICassandraSettableData<?>> {
+public class ProphesiesIndexColumnizer<T> implements ObjectMapColumnizer, Consumer<ICassandraSettableData<?>> {
 	private final List<Consumer<ICassandraSettableData<?>>> statements = new ArrayList<>();
+	private IndexConfig.Index index;
 	private final TypeDescriber<T> typeDescriber;
 	private MappingHelper mappingHelper;
 
-	public ProphesiesColumnizer(TypeDescriber<T> typeDescriber, MappingHelper mappingHelper) {
+	public ProphesiesIndexColumnizer(IndexConfig.Index index, TypeDescriber<T> typeDescriber, MappingHelper mappingHelper) {
+		this.index = index;
 		this.typeDescriber = typeDescriber;
 		this.mappingHelper = mappingHelper;
 	}
@@ -37,7 +39,9 @@ public class ProphesiesColumnizer<T> implements ObjectMapColumnizer, Consumer<IC
 	}
 
 	private void add(Token key, Consumer<ICassandraSettableData<?>> consumer) {
-		statements.add(consumer);
+		if (index.getFields().stream().anyMatch(f -> f.equals(key.snake_case()))) {
+			statements.add(consumer);
+		}
 	}
 
 	@Override

@@ -32,8 +32,8 @@ public class PropheciesTestDoubleRepository<T, K> implements PropheciesBaseCrudR
 		this.typeDescriber = TypeDescriberImpl.getTypeDescriber(modelType);
 	}
 
-	Map<K, T> getStore(Class<T> modelType) {
-		return (Map<K, T>)store.store.computeIfAbsent(modelType, t -> Collections.synchronizedMap(new HashMap<>()));
+	<O, OK> Map<OK, O> getStore(Class<O> modelType) {
+		return (Map<OK, O>)store.store.computeIfAbsent(modelType, t -> Collections.synchronizedMap(new HashMap<>()));
 	}
 
 	@Override
@@ -61,22 +61,16 @@ public class PropheciesTestDoubleRepository<T, K> implements PropheciesBaseCrudR
 
 	@Override
 	public CrudUpdateResult save(T t) {
-		K key = getKey(t);
-		T existing = getStore(modelType).put(key, t);
-		return new CrudUpdateResult() {
-			@Override
-			public int affectedRows() {
-				return existing != null && !existing.equals(t) ? 1 : 0;
-			}
-		};
+		return save(new PropheciesBatch(null), t, modelType);
 	}
 
-	private K getKey(T t) {
-		K key;
-		if (CompoundKey.class.isAssignableFrom(keyType)) {
-			key = (K)mappingHelper.getKey(t);
+	private <X, O> X getKey(O o) {
+		X key;
+		CompoundKey compoundKey = mappingHelper.getKey(o);
+		if (compoundKey.getValues().size() > 1) {
+			key = (X)mappingHelper.getKey(o);
 		} else {
-			key = (K)((Property.PropertyValueList<?>)mappingHelper.getKey(t).getValues()).get(0).getValue();
+			key = (X)((Property.PropertyValueList<?>)mappingHelper.getKey(o).getValues()).get(0).getValue();
 		}
 		return key;
 	}
@@ -86,4 +80,31 @@ public class PropheciesTestDoubleRepository<T, K> implements PropheciesBaseCrudR
 		return new TestDoubleQuery<T>(modelType, mappingHelper, genericFactory, store);
 	}
 
+
+	@Override
+	public <O, OK> CrudUpdateResult save(PropheciesBatch batch, O o, Class<O> oClass) {
+		Object key = getKey(o);
+		O existing = getStore(oClass).put(key, o);
+		return new CrudUpdateResult() {
+			@Override
+			public int affectedRows() {
+				return existing != null && !existing.equals(o) ? 1 : 0;
+			}
+		};
+	}
+
+	@Override
+	public PropheciesBatch getBatch() {
+		return new PropheciesBatch(null);
+	}
+
+	@Override
+	public Class<T> getModelType() {
+		return modelType;
+	}
+
+	@Override
+	public Class<K> getKeyType() {
+		return keyType;
+	}
 }

@@ -56,7 +56,6 @@ public class Cassandra {
 	}
 
 	public CassandraResultSet execute(String query, Consumer<ICassandraSettableData<?>> statementBinder) {
-		System.out.println(query);
 		CassandraSettableData stmt = new CassandraSettableData(session.prepare(query).bind());
 		statementBinder.accept(stmt);
 		return new CassandraResultSet(session.execute(stmt.unwrapStatement()));
