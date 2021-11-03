@@ -10,7 +10,7 @@ import java.util.stream.Collectors;
 public class CarRepository extends ProphesiesCrudRepositoryImpl<Car, UUID> {
 
 	@Inject
-	public CarRepository(PropheciesRepositoryFactory factory, GenericFactory genericFactory) {
+	public CarRepository(PropheciesRepositoryFactory factory) {
 		super(factory.getBaseRepository(Car.class, UUID.class));
 	}
 

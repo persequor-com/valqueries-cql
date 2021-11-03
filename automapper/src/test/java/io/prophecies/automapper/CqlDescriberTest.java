@@ -14,11 +14,16 @@ public class CqlDescriberTest {
 	public void happyPath_car() {
 		CqlDescriber describer = CqlDescriber.get(Car.class);
 		List<IndexConfig.Index> actual = describer.getIndices();
-		assertEquals(1, actual.size());
+		assertEquals(2, actual.size());
 		assertEquals("exhaust_to_car", actual.get(0).getName());
 		assertEquals(2, actual.get(0).getFields().size());
 		assertEquals("exhaust_id", actual.get(0).getFields().get(0));
 		assertEquals("id", actual.get(0).getFields().get(1));
+
+		assertEquals("car_title_idx", actual.get(1).getName());
+		assertEquals(2, actual.get(1).getFields().size());
+		assertEquals("title", actual.get(1).getFields().get(0));
+		assertEquals("id", actual.get(1).getFields().get(1));
 	}
 
 	@Test

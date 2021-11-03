@@ -89,9 +89,13 @@ public class Cassandra {
 	}
 
 	CompletionStage<AsyncResultSet> executeAsync(String query, Consumer<ICassandraSettableData<?>> statementBinder) {
-		CassandraSettableData stmt = new CassandraSettableData(session.prepare(query).bind());
-		statementBinder.accept(stmt);
-		return session.executeAsync(stmt.unwrapStatement());
+		try {
+			CassandraSettableData stmt = new CassandraSettableData(session.prepare(query).bind());
+			statementBinder.accept(stmt);
+			return session.executeAsync(stmt.unwrapStatement());
+		} catch (InvalidQueryException exception) {
+			throw new RuntimeException("Invalid query: "+query+". "+exception.getMessage(), exception);
+		}
 	}
 
 	CompletionStage<AsyncResultSet> executeAsync(String query, Consumer<ICassandraSettableData<?>> statementBinder, Integer limit) {

@@ -62,6 +62,7 @@ public abstract class AutoMapperBaseTests {
 		exhaustRepository = injector.getInstance(ExhaustRepository.class);
 		tireRepository = injector.getInstance(TireRepository.class);
 		carDescriber = TypeDescriberImpl.getTypeDescriber(Car.class);
+		carDescriber.relations();
 		doorDescriber = TypeDescriberImpl.getTypeDescriber(Door.class);
 		engineDescriber = TypeDescriberImpl.getTypeDescriber(Engine.class);
 		engineCarDescriber = TypeDescriberImpl.getTypeDescriber(EngineCar.class);

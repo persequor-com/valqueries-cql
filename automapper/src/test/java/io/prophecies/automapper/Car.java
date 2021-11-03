@@ -1,6 +1,8 @@
 package io.prophecies.automapper;
 
+import io.ran.Key;
 import io.ran.Mapper;
+import io.ran.PrimaryKey;
 import io.ran.Relation;
 
 import java.time.ZonedDateTime;
@@ -10,7 +12,9 @@ import java.util.UUID;
 
 @Mapper(dbType = Prophecies.class)
 public class Car {
+	@PrimaryKey
 	private UUID id;
+	@Key(name = "titleIdx")
 	private String title;
 	private Brand brand;
 	private ZonedDateTime createdAt;

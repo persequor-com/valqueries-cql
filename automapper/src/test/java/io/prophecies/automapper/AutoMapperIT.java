@@ -198,6 +198,7 @@ public class AutoMapperIT extends AutoMapperBaseTests {
 		door.setCar(model);
 		doorRepository.save(door);
 
+
 		Door res = doorRepository.query()
 				.subQuery(Door::getCar, sq -> {
 					sq.eq(Car::getId, model.getId());
@@ -211,6 +212,47 @@ public class AutoMapperIT extends AutoMapperBaseTests {
 				sq.eq(Door::getId, door.getId());
 			})
 			.execute().findFirst().orElseThrow(() -> new RuntimeException());
+
+		assertEquals(model.getId(), carRes.getId());
+	}
+
+	@Test
+	public void subQuery_onIndex() throws Throwable {
+		Car model = factory.get(Car.class);
+		model.setId(UUID.randomUUID());
+		model.setTitle("Muh");
+		model.setExhaustId(UUID.randomUUID());
+		model.setCreatedAt(ZonedDateTime.now().withZoneSameInstant(ZoneOffset.UTC).truncatedTo(ChronoUnit.SECONDS));
+		carRepository.save(model);
+
+		Door door = factory.get(Door.class);
+		door.setId(UUID.randomUUID());
+		door.setTitle("Lazy as such");
+		door.setCar(model);
+		doorRepository.save(door);
+
+		Door res = doorRepository.query()
+				.subQuery(Door::getCar, sq -> {
+					sq.eq(Car::getTitle, model.getTitle());
+				})
+				.execute().findFirst().orElseThrow(() -> new RuntimeException());
+
+		assertEquals(door.getId(), res.getId());
+	}
+
+	@Test
+	public void queryByIndex() throws Throwable {
+		Car model = factory.get(Car.class);
+		model.setId(UUID.randomUUID());
+		model.setTitle("Muh");
+		model.setExhaustId(UUID.randomUUID());
+		model.setBrand(Brand.Porsche);
+		model.setCreatedAt(ZonedDateTime.now().withZoneSameInstant(ZoneOffset.UTC).truncatedTo(ChronoUnit.SECONDS));
+		carRepository.save(model);
+
+		Car carRes = carRepository.query()
+				.eq(Car::getTitle, "Muh")
+				.execute().findFirst().orElseThrow(() -> new RuntimeException());
 
 		assertEquals(model.getId(), carRes.getId());
 	}

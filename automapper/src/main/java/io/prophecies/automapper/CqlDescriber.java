@@ -30,11 +30,13 @@ public class CqlDescriber {
 			String indexName = getTableName(relationDescriber.getToClass().clazz) + "_to_" + getTableName();
 			KeySet fromKeys = relationDescriber.getFromKeys();
 			KeySet primaryKeys = typeDescriber.primaryKeys();
-			boolean matchesPrimaryKey = true;
-			for(int i=0;i<fromKeys.size();i++) {
-				if (!primaryKeys.get(i).getToken().equals(fromKeys.get(i).getToken())) {
-					matchesPrimaryKey = false;
-					break;
+			boolean matchesPrimaryKey = primaryKeys.size() == fromKeys.size();
+			if (matchesPrimaryKey) {
+				for (int i = 0; i < primaryKeys.size(); i++) {
+					if (!primaryKeys.get(i).getToken().equals(fromKeys.get(i).getToken())) {
+						matchesPrimaryKey = false;
+						break;
+					}
 				}
 			}
 			if (matchesPrimaryKey) {
@@ -46,6 +48,19 @@ public class CqlDescriber {
 				});
 				typeDescriber.primaryKeys().forEach(field -> {
 					if (relationDescriber.getFromKeys().stream().noneMatch(fk -> fk.getToken().equals(field.getToken()))) {
+						f.add(field.getToken().snake_case());
+					}
+				});
+			});
+		});
+		typeDescriber.indexes().forEach(idx -> {
+			String indexName = getTableName()+"_"+getTableName(idx.getName());
+			index.add(indexName, f -> {
+				idx.forEach(field -> {
+					f.add(field.getToken().snake_case());
+				});
+				typeDescriber.primaryKeys().forEach(field -> {
+					if (idx.stream().noneMatch(fk -> fk.getToken().equals(field.getToken()))) {
 						f.add(field.getToken().snake_case());
 					}
 				});
@@ -71,61 +86,36 @@ public class CqlDescriber {
 		return Token.CamelCase(clazz.getSimpleName()).snake_case();
 	}
 
+	private String getTableName(String name) {
+		return Token.get(name).snake_case();
+	}
+
 	public List<IndexConfig.Index> getIndices() {
 		return index.getIndices();
 	}
 
-	public Optional<RelationIndex> forReverseRelation(RelationDescriber relationDescriber) {
+	public Optional<IndexConfig.Index> forReverseRelation(RelationDescriber relationDescriber) {
+		return forIndex(relationDescriber.getToKeys());
+	}
+
+	public Optional<IndexConfig.Index> forRelation(RelationDescriber relationDescriber) {
+		return forIndex(relationDescriber.getFromKeys());
+	}
+
+	public Optional<IndexConfig.Index> forIndex(KeySet keySet) {
 		return index.getIndices().stream().map(idx -> {
-			KeySet toKeys = relationDescriber.getToKeys();
 			boolean matches = true;
-			for(int i = 0;i<toKeys.size();i++) {
-				if (!idx.getFields().get(i).equals(toKeys.get(i).getToken().snake_case())) {
+			for(int i = 0;i<keySet.size();i++) {
+				if (!idx.getFields().get(i).equals(keySet.get(i).getToken().snake_case())) {
 					matches = false;
 					break;
 				}
 			}
 			if (matches) {
-				return new RelationIndex(idx, relationDescriber);
+				return idx;
 			}
 
 			return null;
 		}).filter(Objects::nonNull).findFirst();
-	}
-
-	public Optional<RelationIndex> forRelation(RelationDescriber relationDescriber) {
-		return index.getIndices().stream().map(idx -> {
-			KeySet fromK = relationDescriber.getFromKeys();
-			boolean matches = true;
-			for(int i = 0;i<fromK.size();i++) {
-				if (!idx.getFields().get(i).equals(fromK.get(i).getToken().snake_case())) {
-					matches = false;
-					break;
-				}
-			}
-			if (matches) {
-				return new RelationIndex(idx, relationDescriber);
-			}
-
-			return null;
-		}).filter(Objects::nonNull).findFirst();
-	}
-
-	public static class RelationIndex {
-		private IndexConfig.Index index;
-		private RelationDescriber relationDescriber;
-
-		public RelationIndex(IndexConfig.Index index, RelationDescriber relationDescriber) {
-			this.index = index;
-			this.relationDescriber = relationDescriber;
-		}
-
-		public IndexConfig.Index getIndex() {
-			return index;
-		}
-
-		public RelationDescriber getRelationDescriber() {
-			return relationDescriber;
-		}
 	}
 }
